@@ -40,15 +40,19 @@ gltfLoader.load('texstures/minecraft_landscape.glb', (gltf) => {
     minZ: box.min.z + margin,
     maxZ: box.max.z - margin,
     minY: box.min.y + 1.0,
-    maxY: box.max.y + 1.0
+    maxY: box.max.y + 3.0 // Allow vertical movement
   };
 });
 
-const moveSpeed = 0.1;
+const moveAcceleration = 0.02;
+const maxSpeed = 0.15;
+const friction = 0.85;
+// Usunięte: up, down, mouseForward z obiektu move
 const move = { forward: false, backward: false, left: false, right: false };
 let yaw = 0;
 let pitch = 0;
 const mouseSensitivity = 0.002;
+let velocity = new THREE.Vector3(0, 0, 0);
 
 window.addEventListener('keydown', (e) => {
   switch (e.code) {
@@ -56,20 +60,33 @@ window.addEventListener('keydown', (e) => {
     case 'KeyS': move.backward = true; break;
     case 'KeyA': move.left = true; break;
     case 'KeyD': move.right = true; break;
+    // Zmienione: spacja teraz zrzuca bombę zamiast poruszać do góry
+    case 'Space': 
+      e.preventDefault(); // Zapobiega przewijaniu strony
+      // Bomba spada przy każdym naciśnięciu spacji
+      bomb.position.set(0, 5, -5);
+      bomb.visible = true;
+      bombFalling = true;
+      break;
+    // Usunięte: ShiftLeft i KeyE
   }
 });
+
 window.addEventListener('keyup', (e) => {
   switch (e.code) {
     case 'KeyW': move.forward = false; break;
     case 'KeyS': move.backward = false; break;
     case 'KeyA': move.left = false; break;
     case 'KeyD': move.right = false; break;
+    // Usunięte: Space, ShiftLeft
   }
 });
 
 renderer.domElement.addEventListener('click', () => {
   renderer.domElement.requestPointerLock();
 });
+
+// Usunięte: obsługa mousedown i mouseup dla LPM
 
 window.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement === renderer.domElement) {
@@ -81,26 +98,43 @@ window.addEventListener('mousemove', (e) => {
 });
 
 function updateCameraMovement() {
-  camera.rotation.set(pitch, yaw, 0);
+  // Poprawne ustawienie rotacji kamery - używamy quaternion zamiast Euler
+  camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
 
-  const forward = new THREE.Vector3(
-    -Math.sin(yaw),
-    0,
-    -Math.cos(yaw)
-  ).normalize();
+  // Calculate movement direction based on camera orientation - PEŁNY kierunek włączając pionowy
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
+  
+  // Bez modyfikacji - zachowujemy pełny kierunek ruchu
+  // forward.y i right.y pozostają bez zmian
 
-  const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
-  const newPos = camera.position.clone();
+  // Apply acceleration - pełny ruch 3D
+  const acceleration = new THREE.Vector3();
+  if (move.forward) acceleration.add(forward.multiplyScalar(moveAcceleration));
+  if (move.backward) acceleration.add(forward.multiplyScalar(-moveAcceleration));
+  if (move.right) acceleration.add(right.multiplyScalar(moveAcceleration));
+  if (move.left) acceleration.add(right.multiplyScalar(-moveAcceleration));
 
-  if (move.forward) newPos.addScaledVector(forward, moveSpeed);
-  if (move.backward) newPos.addScaledVector(forward, -moveSpeed);
-  if (move.left) newPos.addScaledVector(right, -moveSpeed);
-  if (move.right) newPos.addScaledVector(right, moveSpeed);
+  // Apply acceleration to velocity
+  velocity.add(acceleration);
 
+  // Apply friction to slow down when no input
+  velocity.multiplyScalar(friction);
+
+  // Cap the speed in all directions
+  const speed = velocity.length();
+  if (speed > maxSpeed) {
+    velocity.multiplyScalar(maxSpeed / speed);
+  }
+
+  // Update position
+  const newPos = camera.position.clone().add(velocity);
+
+  // Apply bounds
   if (cameraBounds) {
     newPos.x = THREE.MathUtils.clamp(newPos.x, cameraBounds.minX, cameraBounds.maxX);
-    newPos.z = THREE.MathUtils.clamp(newPos.z, cameraBounds.minZ, cameraBounds.maxZ);
     newPos.y = THREE.MathUtils.clamp(newPos.y, cameraBounds.minY, cameraBounds.maxY);
+    newPos.z = THREE.MathUtils.clamp(newPos.z, cameraBounds.minZ, cameraBounds.maxZ);
   }
 
   camera.position.copy(newPos);
@@ -121,7 +155,7 @@ textureNames.forEach(name => {
 const smokeTextures = [];
 for (let i = 1; i <= 9; i++) {
   textureLoader.load(`PNG/smoke_0${i}.png`, (texture) => smokeTextures.push(texture));
-}
+};
 
 let geometry, material, particles;
 let velocities = [];
@@ -279,16 +313,6 @@ scene.add(bomb);
 bomb.position.set(0, 5, -5);
 let bombFalling = false;
 const bombFallSpeed = 0.07;
-
-window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') {
-    if (!bombFalling && !explosionActive) {
-      bomb.position.set(0, 5, -5);
-      bomb.visible = true;
-      bombFalling = true;
-    }
-  }
-});
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 10, 7);
