@@ -64,17 +64,17 @@ const explosionDuration = 2000;
 function updateCameraMovement() {
   const forwardVector = new THREE.Vector3();
   camera.getWorldDirection(forwardVector);
-  forwardVector.y = 0;
+  forwardVector.y = 0; // blokujemy ruch pionowy (wysokość)
   forwardVector.normalize();
 
   const rightVector = new THREE.Vector3();
-  rightVector.crossVectors(camera.up, forwardVector);
+  rightVector.crossVectors(forwardVector, camera.up); // poprawiona kolejność
   rightVector.normalize();
 
   if (move.forward) camera.position.addScaledVector(forwardVector, moveSpeed);
   if (move.backward) camera.position.addScaledVector(forwardVector, -moveSpeed);
-  if (move.left) camera.position.addScaledVector(rightVector, moveSpeed);
-  if (move.right) camera.position.addScaledVector(rightVector, -moveSpeed);
+  if (move.left) camera.position.addScaledVector(rightVector, -moveSpeed);
+  if (move.right) camera.position.addScaledVector(rightVector, moveSpeed);
 }
 
 function updateExplosion() {
