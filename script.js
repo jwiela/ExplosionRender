@@ -1,7 +1,20 @@
 const scene = new THREE.Scene();
 
+// Load cube map skybox
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+const skyboxTexture = cubeTextureLoader.load([
+  'texstures/skybox/posx.jpg', // Positive X
+  'texstures/skybox/negx.jpg', // Negative X
+  'texstures/skybox/posy.jpg', // Positive Y
+  'texstures/skybox/negy.jpg', // Negative Y
+  'texstures/skybox/posz.jpg', // Positive Z
+  'texstures/skybox/negz.jpg'  // Negative Z
+]);
+scene.background = skyboxTexture;
+scene.environment = skyboxTexture; // Optional: adds environment lighting to scene objects
+
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 0, 10);
+camera.position.set(0, 1.5, 10);
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -9,22 +22,33 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1;
 renderer.outputEncoding = THREE.sRGBEncoding;
 
-// Controls
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-
-// GLB Model loader
 const gltfLoader = new THREE.GLTFLoader();
 let model = null;
+let cameraBounds = null;
 
 gltfLoader.load('texstures/minecraft_landscape.glb', (gltf) => {
   model = gltf.scene;
   model.position.set(0, -1, -5);
   scene.add(model);
+
+  const box = new THREE.Box3().setFromObject(model);
+  const margin = 0.5;
+
+  cameraBounds = {
+    minX: box.min.x + margin,
+    maxX: box.max.x - margin,
+    minZ: box.min.z + margin,
+    maxZ: box.max.z - margin,
+    minY: box.min.y + 1.0,
+    maxY: box.max.y + 1.0
+  };
 });
 
-// Camera movement
-const moveSpeed = 0.5;
+const moveSpeed = 0.1;
 const move = { forward: false, backward: false, left: false, right: false };
+let yaw = 0;
+let pitch = 0;
+const mouseSensitivity = 0.002;
 
 window.addEventListener('keydown', (e) => {
   switch (e.code) {
@@ -32,9 +56,6 @@ window.addEventListener('keydown', (e) => {
     case 'KeyS': move.backward = true; break;
     case 'KeyA': move.left = true; break;
     case 'KeyD': move.right = true; break;
-    case 'Space':
-      if (spriteTexture) startExplosion();
-      break;
   }
 });
 window.addEventListener('keyup', (e) => {
@@ -46,25 +67,46 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
+renderer.domElement.addEventListener('click', () => {
+  renderer.domElement.requestPointerLock();
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (document.pointerLockElement === renderer.domElement) {
+    yaw -= e.movementX * mouseSensitivity;
+    pitch -= e.movementY * mouseSensitivity;
+    const pitchLimit = Math.PI / 2 - 0.1;
+    pitch = Math.max(-pitchLimit, Math.min(pitchLimit, pitch));
+  }
+});
+
 function updateCameraMovement() {
-  const forwardVector = new THREE.Vector3();
-  camera.getWorldDirection(forwardVector);
-  forwardVector.y = 0;
-  forwardVector.normalize();
+  camera.rotation.set(pitch, yaw, 0);
 
-  const rightVector = new THREE.Vector3();
-  rightVector.crossVectors(forwardVector, camera.up).normalize();
+  const forward = new THREE.Vector3(
+    -Math.sin(yaw),
+    0,
+    -Math.cos(yaw)
+  ).normalize();
 
-  if (move.forward) camera.position.addScaledVector(forwardVector, moveSpeed);
-  if (move.backward) camera.position.addScaledVector(forwardVector, -moveSpeed);
-  if (move.left) camera.position.addScaledVector(rightVector, -moveSpeed);
-  if (move.right) camera.position.addScaledVector(rightVector, moveSpeed);
+  const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+  const newPos = camera.position.clone();
+
+  if (move.forward) newPos.addScaledVector(forward, moveSpeed);
+  if (move.backward) newPos.addScaledVector(forward, -moveSpeed);
+  if (move.left) newPos.addScaledVector(right, -moveSpeed);
+  if (move.right) newPos.addScaledVector(right, moveSpeed);
+
+  if (cameraBounds) {
+    newPos.x = THREE.MathUtils.clamp(newPos.x, cameraBounds.minX, cameraBounds.maxX);
+    newPos.z = THREE.MathUtils.clamp(newPos.z, cameraBounds.minZ, cameraBounds.maxZ);
+    newPos.y = THREE.MathUtils.clamp(newPos.y, cameraBounds.minY, cameraBounds.maxY);
+  }
+
+  camera.position.copy(newPos);
 }
 
-// Particle system
 const textureLoader = new THREE.TextureLoader();
-let spriteTexture = null;
-textureLoader.load('particle.png', (sprite) => { spriteTexture = sprite; });
 
 const explosionTextures = [];
 const textureNames = [
@@ -88,18 +130,15 @@ let explosionActive = false;
 let explosionStartTime = 0;
 const explosionDuration = 2000;
 
-function startExplosion() {
-  if (!model || !explosionTextures.length) return;
+function startExplosionAt(pos) {
+  if (!explosionTextures.length) return;
 
   if (particles) {
     scene.remove(particles);
-    particles.geometry.dispose();
-    particles.material.dispose();
+    geometry.dispose();
+    material.dispose();
     particles = null;
   }
-
-  const modelPos = new THREE.Vector3();
-  model.getWorldPosition(modelPos);
 
   velocities = [];
   const positions = [];
@@ -115,7 +154,7 @@ function startExplosion() {
     const y = radius * Math.sin(phi) * Math.sin(theta);
     const z = radius * Math.cos(phi);
 
-    positions.push(x + modelPos.x, y + modelPos.y, z + modelPos.z);
+    positions.push(x + pos.x, y + pos.y, z + pos.z);
 
     const speed = Math.random() * 0.2;
     const dir = new THREE.Vector3(x, y, z).normalize();
@@ -144,7 +183,7 @@ function startExplosion() {
   explosionActive = true;
   explosionStartTime = performance.now();
 
-  startSmoke(modelPos);
+  startSmoke(pos);
 }
 
 function updateExplosion() {
@@ -168,8 +207,8 @@ function endExplosion() {
   explosionActive = false;
   if (particles) {
     scene.remove(particles);
-    particles.geometry.dispose();
-    particles.material.dispose();
+    geometry.dispose();
+    material.dispose();
     particles = null;
   }
 }
@@ -232,10 +271,48 @@ function startSmoke(origin) {
   setTimeout(() => updateSmoke(), 500);
 }
 
-// Main render loop
+const bombGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+const bombMaterial = new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0x440000 });
+const bomb = new THREE.Mesh(bombGeometry, bombMaterial);
+scene.add(bomb);
+
+bomb.position.set(0, 5, -5);
+let bombFalling = false;
+const bombFallSpeed = 0.07;
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    if (!bombFalling && !explosionActive) {
+      bomb.position.set(0, 5, -5);
+      bomb.visible = true;
+      bombFalling = true;
+    }
+  }
+});
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 10, 7);
+scene.add(directionalLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+function updateBomb() {
+  if (!bombFalling) return;
+
+  bomb.position.y -= bombFallSpeed;
+
+  if (bomb.position.y <= -1) {
+    bombFalling = false;
+    bomb.visible = false;
+    startExplosionAt(bomb.position.clone());
+  }
+}
+
 function renderScene() {
   requestAnimationFrame(renderScene);
   updateCameraMovement();
+  updateBomb();
   if (explosionActive) updateExplosion();
   renderer.render(scene, camera);
 }
