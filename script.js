@@ -40,15 +40,19 @@ gltfLoader.load('texstures/minecraft_landscape.glb', (gltf) => {
     minZ: box.min.z + margin,
     maxZ: box.max.z - margin,
     minY: box.min.y + 1.0,
-    maxY: box.max.y + 1.0
+    maxY: box.max.y + 3.0
   };
 });
 
-const moveSpeed = 0.1;
+const moveAcceleration = 0.02;
+const maxSpeed = 0.15;
+const friction = 0.85;
+// Usunięte: up, down, mouseForward z obiektu move
 const move = { forward: false, backward: false, left: false, right: false };
 let yaw = 0;
 let pitch = 0;
 const mouseSensitivity = 0.002;
+let velocity = new THREE.Vector3(0, 0, 0);
 
 window.addEventListener('keydown', (e) => {
   switch (e.code) {
@@ -81,26 +85,43 @@ window.addEventListener('mousemove', (e) => {
 });
 
 function updateCameraMovement() {
-  camera.rotation.set(pitch, yaw, 0);
+  // Poprawne ustawienie rotacji kamery - używamy quaternion zamiast Euler
+  camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
 
-  const forward = new THREE.Vector3(
-    -Math.sin(yaw),
-    0,
-    -Math.cos(yaw)
-  ).normalize();
+  // Calculate movement direction based on camera orientation - PEŁNY kierunek włączając pionowy
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
+  
+  // Bez modyfikacji - zachowujemy pełny kierunek ruchu
+  // forward.y i right.y pozostają bez zmian
 
-  const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
-  const newPos = camera.position.clone();
+  // Apply acceleration - pełny ruch 3D
+  const acceleration = new THREE.Vector3();
+  if (move.forward) acceleration.add(forward.multiplyScalar(moveAcceleration));
+  if (move.backward) acceleration.add(forward.multiplyScalar(-moveAcceleration));
+  if (move.right) acceleration.add(right.multiplyScalar(moveAcceleration));
+  if (move.left) acceleration.add(right.multiplyScalar(-moveAcceleration));
 
-  if (move.forward) newPos.addScaledVector(forward, moveSpeed);
-  if (move.backward) newPos.addScaledVector(forward, -moveSpeed);
-  if (move.left) newPos.addScaledVector(right, -moveSpeed);
-  if (move.right) newPos.addScaledVector(right, moveSpeed);
+  // Apply acceleration to velocity
+  velocity.add(acceleration);
 
+  // Apply friction to slow down when no input
+  velocity.multiplyScalar(friction);
+
+  // Cap the speed in all directions
+  const speed = velocity.length();
+  if (speed > maxSpeed) {
+    velocity.multiplyScalar(maxSpeed / speed);
+  }
+
+  // Update position
+  const newPos = camera.position.clone().add(velocity);
+
+  // Apply bounds
   if (cameraBounds) {
     newPos.x = THREE.MathUtils.clamp(newPos.x, cameraBounds.minX, cameraBounds.maxX);
-    newPos.z = THREE.MathUtils.clamp(newPos.z, cameraBounds.minZ, cameraBounds.maxZ);
     newPos.y = THREE.MathUtils.clamp(newPos.y, cameraBounds.minY, cameraBounds.maxY);
+    newPos.z = THREE.MathUtils.clamp(newPos.z, cameraBounds.minZ, cameraBounds.maxZ);
   }
 
   camera.position.copy(newPos);
@@ -123,95 +144,146 @@ for (let i = 1; i <= 9; i++) {
   textureLoader.load(`PNG/smoke_0${i}.png`, (texture) => smokeTextures.push(texture));
 }
 
-let geometry, material, particles;
-let velocities = [];
-const count = 500;
-let explosionActive = false;
-let explosionStartTime = 0;
-const explosionDuration = 2000;
 
 function startExplosionAt(pos) {
-  if (!explosionTextures.length) return;
-
-  if (particles) {
-    scene.remove(particles);
-    geometry.dispose();
-    material.dispose();
-    particles = null;
-  }
-
-  velocities = [];
-  const positions = [];
-  const textureIndex = Math.floor(Math.random() * explosionTextures.length);
-  const selectedTexture = explosionTextures[textureIndex];
-
-  for (let i = 0; i < count; i++) {
-    const radius = Math.random() * 0.5;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.random() * Math.PI;
-
-    const x = radius * Math.sin(phi) * Math.cos(theta);
-    const y = radius * Math.sin(phi) * Math.sin(theta);
-    const z = radius * Math.cos(phi);
-
-    positions.push(x + pos.x, y + pos.y, z + pos.z);
-
-    const speed = Math.random() * 0.2;
-    const dir = new THREE.Vector3(x, y, z).normalize();
-    velocities.push(
-      dir.x * speed + (Math.random() - 0.5) * 0.05,
-      dir.y * speed + (Math.random() - 0.5) * 0.05,
-      dir.z * speed + (Math.random() - 0.5) * 0.05
-    );
-  }
-
-  geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  material = new THREE.PointsMaterial({
-    size: 0.3,
-    map: selectedTexture,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    opacity: 1,
-    color: 0xffaa00
-  });
-
-  particles = new THREE.Points(geometry, material);
-  scene.add(particles);
-
-  explosionActive = true;
-  explosionStartTime = performance.now();
-
+  startMushroomCloud(pos);
+  createShockwave(pos);
+  flashScreen();
   startSmoke(pos);
 }
 
-function updateExplosion() {
-  if (!geometry || !material) return;
 
-  const pos = geometry.attributes.position.array;
-  const elapsedTime = performance.now() - explosionStartTime;
-  material.opacity = Math.max(1 - elapsedTime / explosionDuration, 0);
+
+function startMushroomCloud(origin) {
+  const count = 400;
+  const positions = [];
+  const velocities = [];
+  const geometry = new THREE.BufferGeometry();
 
   for (let i = 0; i < count; i++) {
-    pos[i * 3] += velocities[i * 3];
-    pos[i * 3 + 1] += velocities[i * 3 + 1];
-    pos[i * 3 + 2] += velocities[i * 3 + 2];
-  }
-  geometry.attributes.position.needsUpdate = true;
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * 1.5;
+    const height = Math.random() * 2;
 
-  if (elapsedTime > explosionDuration) endExplosion();
+    const x = Math.cos(angle) * radius;
+    const y = height;
+    const z = Math.sin(angle) * radius;
+
+    positions.push(origin.x + x, origin.y + y, origin.z + z);
+
+    // Upwards and slight outward velocity
+    velocities.push(x * 0.005, 0.02 + Math.random() * 0.03, z * 0.005);
+  }
+
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+  const texture = smokeTextures[Math.floor(Math.random() * smokeTextures.length)];
+  const material = new THREE.PointsMaterial({
+    size: 3.0,
+    map: texture,
+    transparent: true,
+    opacity: 0.3,
+    depthWrite: false,
+    blending: THREE.NormalBlending
+  });
+
+  const cloud = new THREE.Points(geometry, material);
+  scene.add(cloud);
+
+  const startTime = performance.now();
+
+  function update() {
+    const time = performance.now() - startTime;
+    const pos = geometry.attributes.position.array;
+
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] += velocities[i * 3];
+      pos[i * 3 + 1] += velocities[i * 3 + 1];
+      pos[i * 3 + 2] += velocities[i * 3 + 2];
+    }
+
+    geometry.attributes.position.needsUpdate = true;
+    material.opacity = Math.max(0.4 - time / 5000, 0);
+
+    if (material.opacity > 0) {
+      requestAnimationFrame(update);
+    } else {
+      scene.remove(cloud);
+      geometry.dispose();
+      material.dispose();
+    }
+  }
+
+  update();
 }
 
-function endExplosion() {
-  explosionActive = false;
-  if (particles) {
-    scene.remove(particles);
-    geometry.dispose();
-    material.dispose();
-    particles = null;
+
+
+function createShockwave(pos) {
+  // Podnieś shockwave wyżej (np. o 1 jednostkę)
+  const shockwaveY = pos.y + 2.5;
+
+  // Zwiększ rozmiar pierścienia
+  const ringGeo = new THREE.RingGeometry(0.5, 1.5, 128); // większy rozmiar i więcej segmentów
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 1.0, // jaśniejszy
+    side: THREE.DoubleSide
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(pos.x, shockwaveY, pos.z); // ustaw wyżej
+  scene.add(ring);
+
+  const start = performance.now();
+  function update() {
+    const t = (performance.now() - start) / 1000;
+    ring.scale.setScalar(1 + t * 7); // szybciej rośnie
+    ring.material.opacity = 1.0 * (1 - t / 1.5); // dłużej widoczny
+
+    if (ring.material.opacity > 0) {
+      requestAnimationFrame(update);
+    } else {
+      scene.remove(ring);
+      ring.geometry.dispose();
+      ring.material.dispose();
+    }
   }
+  update();
 }
+
+function flashScreen() {
+  const flash = document.createElement('div');
+  flash.style.position = 'absolute';
+  flash.style.top = 0;
+  flash.style.left = 0;
+  flash.style.width = '100vw';
+  flash.style.height = '100vh';
+  flash.style.backgroundColor = 'white';
+  flash.style.opacity = 1;
+  flash.style.zIndex = 9999;
+  flash.style.pointerEvents = 'none';
+  document.body.appendChild(flash);
+
+  let opacity = 1;
+  function fade() {
+    opacity -= 0.05;
+    flash.style.opacity = opacity;
+    if (opacity > 0) {
+      requestAnimationFrame(fade);
+    } else {
+      document.body.removeChild(flash);
+    }
+  }
+
+  setTimeout(fade, 30);
+}
+
+
+
+
+
 
 function startSmoke(origin) {
   const smokeCount = 50;
@@ -282,7 +354,7 @@ const bombFallSpeed = 0.07;
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
-    if (!bombFalling && !explosionActive) {
+    if (!bombFalling) {
       bomb.position.set(0, 5, -5);
       bomb.visible = true;
       bombFalling = true;
@@ -313,7 +385,6 @@ function renderScene() {
   requestAnimationFrame(renderScene);
   updateCameraMovement();
   updateBomb();
-  if (explosionActive) updateExplosion();
   renderer.render(scene, camera);
 }
 
