@@ -127,6 +127,10 @@ function updateCameraMovement() {
   camera.position.copy(newPos);
 }
 
+
+
+
+
 const textureLoader = new THREE.TextureLoader();
 
 const explosionTextures = [];
@@ -143,6 +147,20 @@ const smokeTextures = [];
 for (let i = 1; i <= 9; i++) {
   textureLoader.load(`PNG/smoke_0${i}.png`, (texture) => smokeTextures.push(texture));
 }
+
+
+let bombModel = null;
+let bombFalling = false;
+const bombFallSpeed = 0.07;
+
+gltfLoader.load('texstures/atomic_bomb.glb', (gltf) => {
+  bombModel = gltf.scene;
+  bombModel.scale.set(0.2, 0.2, 0.2);  // dostosuj rozmiar według potrzeby
+  bombModel.visible = false;  // na start niewidoczny
+  scene.add(bombModel);
+});
+
+
 
 
 function startExplosionAt(pos) {
@@ -221,7 +239,7 @@ function startMushroomCloud(origin) {
 
 function createShockwave(pos) {
   // Podnieś shockwave wyżej (np. o 1 jednostkę)
-  const shockwaveY = pos.y + 2.5;
+  const shockwaveY = pos.y + 1.3;
 
   // Zwiększ rozmiar pierścienia
   const ringGeo = new THREE.RingGeometry(0.5, 1.5, 128); // większy rozmiar i więcej segmentów
@@ -343,20 +361,20 @@ function startSmoke(origin) {
   setTimeout(() => updateSmoke(), 500);
 }
 
-const bombGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+/*const bombGeometry = new THREE.SphereGeometry(0.3, 32, 32);
 const bombMaterial = new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0x440000 });
 const bomb = new THREE.Mesh(bombGeometry, bombMaterial);
 scene.add(bomb);
 
 bomb.position.set(0, 5, -5);
 let bombFalling = false;
-const bombFallSpeed = 0.07;
+const bombFallSpeed = 0.07; */
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
-    if (!bombFalling) {
-      bomb.position.set(0, 5, -5);
-      bomb.visible = true;
+    if (!bombFalling && bombModel) {
+      bombModel.position.set(0, 5, -5);
+      bombModel.visible = true;
       bombFalling = true;
     }
   }
@@ -370,16 +388,17 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
 function updateBomb() {
-  if (!bombFalling) return;
+  if (!bombFalling || !bombModel) return;
 
-  bomb.position.y -= bombFallSpeed;
+  bombModel.position.y -= bombFallSpeed;
 
-  if (bomb.position.y <= -1) {
+  if (bombModel.position.y <= 0.5) {
     bombFalling = false;
-    bomb.visible = false;
-    startExplosionAt(bomb.position.clone());
+    bombModel.visible = false;
+    startExplosionAt(bombModel.position.clone());
   }
 }
+
 
 function renderScene() {
   requestAnimationFrame(renderScene);
