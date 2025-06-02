@@ -164,10 +164,163 @@ gltfLoader.load('texstures/atomic_bomb.glb', (gltf) => {
 
 
 function startExplosionAt(pos) {
-  startMushroomCloud(pos);
-  createShockwave(pos);
-  flashScreen();
-  startSmoke(pos);
+  flashScreen(); // 0 μs - błysk
+  setTimeout(() => createPlasmaBall(pos), 10); // 1–10 μs - plazma
+  setTimeout(() => createShockwave(pos), 40); // 10–100 μs - fala uderzeniowa
+  setTimeout(() => createFireball(pos), 80); // 0,1–1 ms - kula ognia
+  setTimeout(() => startMushroomCloud(pos), 180); // 10–100 ms - chmura grzyba
+  setTimeout(() => startSmoke(pos), 350); // 0,1–1 s - dym
+  setTimeout(() => createFallout(pos), 2500); // kilka sekund po wybuchu - fallout
+}
+
+
+function createPlasmaBall(pos) {
+  const geometry = new THREE.BufferGeometry();
+  const positions = [];
+  for (let i = 0; i < 40; i++) {
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = 2 * Math.PI * Math.random();
+    const r = 0.2 + Math.random() * 0.1;
+    positions.push(
+      pos.x + r * Math.sin(phi) * Math.cos(theta),
+      pos.y + r * Math.cos(phi),
+      pos.z + r * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    size: 1.2,
+    map: explosionTextures[3] || null, // np. flare_01.png
+    color: 0x99ccff,
+    transparent: true,
+    opacity: 0.95,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+
+  const start = performance.now();
+  function update() {
+    const t = (performance.now() - start) / 1000;
+    material.opacity = 0.95 - t * 2.5;
+    points.scale.setScalar(1 + t * 2.5);
+    if (material.opacity > 0) {
+      requestAnimationFrame(update);
+    } else {
+      scene.remove(points);
+      geometry.dispose();
+      material.dispose();
+    }
+  }
+  update();
+}
+
+
+function createShockwave(pos) {
+  // Podnieś shockwave wyżej (np. o 1 jednostkę)
+  const shockwaveY = pos.y + 1.3;
+
+  // Zwiększ rozmiar pierścienia
+  const ringGeo = new THREE.RingGeometry(0.5, 1.5, 128); // większy rozmiar i więcej segmentów
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 1.0, // jaśniejszy
+    side: THREE.DoubleSide
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(pos.x, shockwaveY, pos.z); // ustaw wyżej
+  scene.add(ring);
+
+  const start = performance.now();
+  function update() {
+    const t = (performance.now() - start) / 1000;
+    ring.scale.setScalar(1 + t * 7); // szybciej rośnie
+    ring.material.opacity = 1.0 * (1 - t / 1.5); // dłużej widoczny
+
+    if (ring.material.opacity > 0) {
+      requestAnimationFrame(update);
+    } else {
+      scene.remove(ring);
+      ring.geometry.dispose();
+      ring.material.dispose();
+    }
+  }
+  update();
+}
+
+function flashScreen() {
+  const flash = document.createElement('div');
+  flash.style.position = 'absolute';
+  flash.style.top = 0;
+  flash.style.left = 0;
+  flash.style.width = '100vw';
+  flash.style.height = '100vh';
+  flash.style.backgroundColor = 'white';
+  flash.style.opacity = 1;
+  flash.style.zIndex = 9999;
+  flash.style.pointerEvents = 'none';
+  document.body.appendChild(flash);
+
+  let opacity = 1;
+  function fade() {
+    opacity -= 0.05;
+    flash.style.opacity = opacity;
+    if (opacity > 0) {
+      requestAnimationFrame(fade);
+    } else {
+      document.body.removeChild(flash);
+    }
+  }
+
+  setTimeout(fade, 30);
+}
+
+
+
+
+function createFireball(pos) {
+  const geometry = new THREE.BufferGeometry();
+  const positions = [];
+  for (let i = 0; i < 80; i++) {
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = 2 * Math.PI * Math.random();
+    const r = 0.5 + Math.random() * 0.2;
+    positions.push(
+      pos.x + r * Math.sin(phi) * Math.cos(theta),
+      pos.y + r * Math.cos(phi),
+      pos.z + r * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    size: 2.5,
+    map: explosionTextures[5] || null, // np. fire_01.png
+    color: 0xffcc00,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+
+  const start = performance.now();
+  function update() {
+    const t = (performance.now() - start) / 1000;
+    material.opacity = 0.85 - t * 0.7;
+    points.scale.setScalar(1 + t * 6);
+    if (material.opacity > 0) {
+      requestAnimationFrame(update);
+    } else {
+      scene.remove(points);
+      geometry.dispose();
+      material.dispose();
+    }
+  }
+  update();
 }
 
 
@@ -237,70 +390,64 @@ function startMushroomCloud(origin) {
 
 
 
-function createShockwave(pos) {
-  // Podnieś shockwave wyżej (np. o 1 jednostkę)
-  const shockwaveY = pos.y + 1.3;
+function createFallout(pos) {
+  const geometry = new THREE.BufferGeometry();
+  const count = 1200; // dużo więcej cząstek
+  const positions = [];
+  const velocities = [];
+  // Załóżmy, że mapa ma rozmiar ok. 100x100 jednostek (dostosuj jeśli trzeba)
+  const falloutRadius = 50; // promień rozrzutu falloutu
 
-  // Zwiększ rozmiar pierścienia
-  const ringGeo = new THREE.RingGeometry(0.5, 1.5, 128); // większy rozmiar i więcej segmentów
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
+  for (let i = 0; i < count; i++) {
+    // Rozrzut na dużym obszarze wokół epicentrum
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.sqrt(Math.random()) * falloutRadius;
+    const x = pos.x + Math.cos(angle) * radius;
+    const z = pos.z + Math.sin(angle) * radius;
+    const y = pos.y + 10 + Math.random() * 8;
+
+    positions.push(x, y, z);
+
+    velocities.push(
+      (Math.random() - 0.5) * 0.002, // minimalny dryf poziomy
+      -0.003 - Math.random() * 0.003, // wolne opadanie
+      (Math.random() - 0.5) * 0.002
+    );
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    size: 0.22,
+    map: smokeTextures[0] || null,
+    color: 0xaaa97f,
     transparent: true,
-    opacity: 1.0, // jaśniejszy
-    side: THREE.DoubleSide
+    opacity: 0.32,
+    depthWrite: false,
+    blending: THREE.NormalBlending
   });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.set(pos.x, shockwaveY, pos.z); // ustaw wyżej
-  scene.add(ring);
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
 
   const start = performance.now();
   function update() {
     const t = (performance.now() - start) / 1000;
-    ring.scale.setScalar(1 + t * 7); // szybciej rośnie
-    ring.material.opacity = 1.0 * (1 - t / 1.5); // dłużej widoczny
-
-    if (ring.material.opacity > 0) {
+    const posArr = geometry.attributes.position.array;
+    for (let i = 0; i < count; i++) {
+      posArr[i * 3] += velocities[i * 3];
+      posArr[i * 3 + 1] += velocities[i * 3 + 1];
+      posArr[i * 3 + 2] += velocities[i * 3 + 2];
+    }
+    geometry.attributes.position.needsUpdate = true;
+    material.opacity = Math.max(0.32 - t * 0.012, 0); // bardzo wolne zanikanie (ok. 25s)
+    if (material.opacity > 0) {
       requestAnimationFrame(update);
     } else {
-      scene.remove(ring);
-      ring.geometry.dispose();
-      ring.material.dispose();
+      scene.remove(points);
+      geometry.dispose();
+      material.dispose();
     }
   }
   update();
 }
-
-function flashScreen() {
-  const flash = document.createElement('div');
-  flash.style.position = 'absolute';
-  flash.style.top = 0;
-  flash.style.left = 0;
-  flash.style.width = '100vw';
-  flash.style.height = '100vh';
-  flash.style.backgroundColor = 'white';
-  flash.style.opacity = 1;
-  flash.style.zIndex = 9999;
-  flash.style.pointerEvents = 'none';
-  document.body.appendChild(flash);
-
-  let opacity = 1;
-  function fade() {
-    opacity -= 0.05;
-    flash.style.opacity = opacity;
-    if (opacity > 0) {
-      requestAnimationFrame(fade);
-    } else {
-      document.body.removeChild(flash);
-    }
-  }
-
-  setTimeout(fade, 30);
-}
-
-
-
-
 
 
 function startSmoke(origin) {
