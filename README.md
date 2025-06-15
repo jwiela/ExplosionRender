@@ -13,3 +13,4 @@
 |D|Ruch w prawo|
 |Spacja|Zrzucenie bomby|
 |Mysz|Rozglądanie się (najpierw kliknij na canvas aby zablokować waskaźnik)|
+## **🛠️ Użyte technologie**
