@@ -5,7 +5,7 @@
 - Środowisko 3D: Krajobraz w stylu Minecraft z panoramą nieba
 - Symulacja wybuchu bomby
 ## **🎮 Sterowanie**
-|Klawisz|Akcja|
+|**Klawisz**|**Akcja**|
 |:------:|:---------:|
 |W|Ruch do przodu|
 |S|Ruch do tyłu|
