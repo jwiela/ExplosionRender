@@ -1,1 +1,1 @@
-[Explosion Render](https://explosionrender.web.app/)
+## **Pełna wersja projektu dostępna jest po adresem: https://explosionrender.web.app/**
