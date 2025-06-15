@@ -14,7 +14,7 @@ scene.background = skyboxTexture;
 scene.environment = skyboxTexture; // Optional: adds environment lighting to scene objects
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 1.5, 10);
+camera.position.set(0, 2, 10);
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -182,15 +182,15 @@ function createPlasmaBall(pos) {
     const theta = 2 * Math.PI * Math.random();
     const r = 0.2 + Math.random() * 0.1;
     positions.push(
-      pos.x + r * Math.sin(phi) * Math.cos(theta),
-      pos.y + r * Math.cos(phi),
-      pos.z + r * Math.sin(phi) * Math.sin(theta)
+      r * Math.sin(phi) * Math.cos(theta), // BEZ pos.x
+      r * Math.cos(phi),                   // BEZ pos.y
+      r * Math.sin(phi) * Math.sin(theta)  // BEZ pos.z
     );
   }
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   const material = new THREE.PointsMaterial({
     size: 1.2,
-    map: explosionTextures[3] || null, // np. flare_01.png
+    map: explosionTextures[3] || null,
     color: 0x99ccff,
     transparent: true,
     opacity: 0.95,
@@ -198,6 +198,7 @@ function createPlasmaBall(pos) {
     blending: THREE.AdditiveBlending
   });
   const points = new THREE.Points(geometry, material);
+  points.position.set(pos.x, pos.y, pos.z); // USTAW pozycję całego obiektu
   scene.add(points);
 
   const start = performance.now();
@@ -289,9 +290,9 @@ function createFireball(pos) {
     const theta = 2 * Math.PI * Math.random();
     const r = 0.5 + Math.random() * 0.2;
     positions.push(
-      pos.x + r * Math.sin(phi) * Math.cos(theta),
-      pos.y + r * Math.cos(phi),
-      pos.z + r * Math.sin(phi) * Math.sin(theta)
+      r * Math.sin(phi) * Math.cos(theta), // BEZ pos.x
+      r * Math.cos(phi),                   // BEZ pos.y
+      r * Math.sin(phi) * Math.sin(theta)  // BEZ pos.z
     );
   }
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -305,6 +306,7 @@ function createFireball(pos) {
     blending: THREE.AdditiveBlending
   });
   const points = new THREE.Points(geometry, material);
+  points.position.set(pos.x, pos.y, pos.z); // USTAW pozycję całego obiektu
   scene.add(points);
 
   const start = performance.now();
