@@ -8,3 +8,8 @@
 |Klawisz|Akcja|
 |:------:|:---------:|
 |W|Ruch do przodu|
+|S|Ruch do tyłu|
+|A|Ruch w lewo|
+|D|Ruch w prawo|
+|Spacja|Zrzucenie bomby|
+|Mysz|Rozglądanie się (najpierw kliknij na canvas aby zablokować waskaźnik)|
