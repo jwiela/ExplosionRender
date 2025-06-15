@@ -14,3 +14,7 @@
 |Spacja|Zrzucenie bomby|
 |Mysz|Rozglądanie się (najpierw kliknij na canvas aby zablokować waskaźnik)|
 ## **🛠️ Użyte technologie**
+- Three.js
+- WebGL 
+- GLTF/GLB - format modeli 3D
+- Pointer Lock API - kontrola myszy 
