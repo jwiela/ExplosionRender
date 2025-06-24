@@ -128,9 +128,8 @@ const textureLoader = new THREE.TextureLoader();
 
 const explosionTextures = [];
 const textureNames = [
-  'circle_01.png', 'dirt_01.png', 'flame_01.png',
-  'fire_01.png', 'flare_01.png', 'light_01.png',
-  'magic_01.png', 'star_01.png', 'spark_01.png',
+  'flame_01.png',
+  'fire_01.png',
 ];
 textureNames.forEach(name => {
   textureLoader.load(`PNG/${name}`, (texture) => explosionTextures.push(texture));
@@ -183,7 +182,7 @@ function createPlasmaBall(pos) {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   const material = new THREE.PointsMaterial({
     size: 1.2,
-    map: explosionTextures[3] || null,
+    map: explosionTextures[1] || null,
     color: 0x99ccff,
     transparent: true,
     opacity: 0.95,
@@ -289,7 +288,7 @@ function createFireball(pos) {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   const material = new THREE.PointsMaterial({
     size: 2.5,
-    map: explosionTextures[2] || null, 
+    map: explosionTextures[0] || null, 
     color: 0xffcc00,
     transparent: true,
     opacity: 0.85,
