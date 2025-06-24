@@ -1,6 +1,5 @@
 const scene = new THREE.Scene();
 
-// Load cube map skybox
 const cubeTextureLoader = new THREE.CubeTextureLoader();
 const skyboxTexture = cubeTextureLoader.load([
   'texstures/skybox/posx.jpg', // Positive X
@@ -11,7 +10,7 @@ const skyboxTexture = cubeTextureLoader.load([
   'texstures/skybox/negz.jpg'  // Negative Z
 ]);
 scene.background = skyboxTexture;
-scene.environment = skyboxTexture; // Optional: adds environment lighting to scene objects
+scene.environment = skyboxTexture; 
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 2, 10);
@@ -47,7 +46,6 @@ gltfLoader.load('texstures/minecraft_landscape.glb', (gltf) => {
 const moveAcceleration = 0.02;
 const maxSpeed = 0.15;
 const friction = 0.85;
-// Usunięte: up, down, mouseForward z obiektu move
 const move = { forward: false, backward: false, left: false, right: false };
 let yaw = 0;
 let pitch = 0;
@@ -85,39 +83,34 @@ window.addEventListener('mousemove', (e) => {
 });
 
 function updateCameraMovement() {
-  // Poprawne ustawienie rotacji kamery - używamy quaternion zamiast Euler
   camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
 
-  // Calculate movement direction based on camera orientation - PEŁNY kierunek włączając pionowy
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
   
-  // Bez modyfikacji - zachowujemy pełny kierunek ruchu
-  // forward.y i right.y pozostają bez zmian
 
-  // Apply acceleration - pełny ruch 3D
+
   const acceleration = new THREE.Vector3();
   if (move.forward) acceleration.add(forward.multiplyScalar(moveAcceleration));
   if (move.backward) acceleration.add(forward.multiplyScalar(-moveAcceleration));
   if (move.right) acceleration.add(right.multiplyScalar(moveAcceleration));
   if (move.left) acceleration.add(right.multiplyScalar(-moveAcceleration));
 
-  // Apply acceleration to velocity
+
   velocity.add(acceleration);
 
-  // Apply friction to slow down when no input
+
   velocity.multiplyScalar(friction);
 
-  // Cap the speed in all directions
+
   const speed = velocity.length();
   if (speed > maxSpeed) {
     velocity.multiplyScalar(maxSpeed / speed);
   }
 
-  // Update position
   const newPos = camera.position.clone().add(velocity);
 
-  // Apply bounds
+
   if (cameraBounds) {
     newPos.x = THREE.MathUtils.clamp(newPos.x, cameraBounds.minX, cameraBounds.maxX);
     newPos.y = THREE.MathUtils.clamp(newPos.y, cameraBounds.minY, cameraBounds.maxY);
@@ -155,8 +148,8 @@ const bombFallSpeed = 0.07;
 
 gltfLoader.load('texstures/atomic_bomb.glb', (gltf) => {
   bombModel = gltf.scene;
-  bombModel.scale.set(0.2, 0.2, 0.2);  // dostosuj rozmiar według potrzeby
-  bombModel.visible = false;  // na start niewidoczny
+  bombModel.scale.set(0.2, 0.2, 0.2);  
+  bombModel.visible = false;  
   scene.add(bombModel);
 });
 
@@ -164,13 +157,13 @@ gltfLoader.load('texstures/atomic_bomb.glb', (gltf) => {
 
 
 function startExplosionAt(pos) {
-  flashScreen(); // 0 μs - błysk
-  setTimeout(() => createPlasmaBall(pos), 10); // 1–10 μs - plazma
-  setTimeout(() => createShockwave(pos), 40); // 10–100 μs - fala uderzeniowa
-  setTimeout(() => createFireball(pos), 80); // 0,1–1 ms - kula ognia
-  setTimeout(() => startMushroomCloud(pos), 180); // 10–100 ms - chmura grzyba
-  setTimeout(() => startSmoke(pos), 350); // 0,1–1 s - dym
-  setTimeout(() => createFallout(pos), 2500); // kilka sekund po wybuchu - fallout
+  flashScreen(); 
+  setTimeout(() => createPlasmaBall(pos), 10); 
+  setTimeout(() => createShockwave(pos), 40); 
+  setTimeout(() => createFireball(pos), 80); 
+  setTimeout(() => startMushroomCloud(pos), 180); 
+  setTimeout(() => startSmoke(pos), 350); 
+  setTimeout(() => createFallout(pos), 2500); 
 }
 
 
@@ -182,9 +175,9 @@ function createPlasmaBall(pos) {
     const theta = 2 * Math.PI * Math.random();
     const r = 0.2 + Math.random() * 0.1;
     positions.push(
-      r * Math.sin(phi) * Math.cos(theta), // BEZ pos.x
-      r * Math.cos(phi),                   // BEZ pos.y
-      r * Math.sin(phi) * Math.sin(theta)  // BEZ pos.z
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi),                   
+      r * Math.sin(phi) * Math.sin(theta) 
     );
   }
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -198,7 +191,7 @@ function createPlasmaBall(pos) {
     blending: THREE.AdditiveBlending
   });
   const points = new THREE.Points(geometry, material);
-  points.position.set(pos.x, pos.y, pos.z); // USTAW pozycję całego obiektu
+  points.position.set(pos.x, pos.y, pos.z);
   scene.add(points);
 
   const start = performance.now();
@@ -219,27 +212,25 @@ function createPlasmaBall(pos) {
 
 
 function createShockwave(pos) {
-  // Podnieś shockwave wyżej (np. o 1 jednostkę)
   const shockwaveY = pos.y + 1.3;
 
-  // Zwiększ rozmiar pierścienia
-  const ringGeo = new THREE.RingGeometry(0.5, 1.5, 128); // większy rozmiar i więcej segmentów
+  const ringGeo = new THREE.RingGeometry(0.5, 1.5, 128);
   const ringMat = new THREE.MeshBasicMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 1.0, // jaśniejszy
+    opacity: 1.0, 
     side: THREE.DoubleSide
   });
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.rotation.x = -Math.PI / 2;
-  ring.position.set(pos.x, shockwaveY, pos.z); // ustaw wyżej
+  ring.position.set(pos.x, shockwaveY, pos.z); 
   scene.add(ring);
 
   const start = performance.now();
   function update() {
     const t = (performance.now() - start) / 1000;
-    ring.scale.setScalar(1 + t * 7); // szybciej rośnie
-    ring.material.opacity = 1.0 * (1 - t / 1.5); // dłużej widoczny
+    ring.scale.setScalar(1 + t * 7); 
+    ring.material.opacity = 1.0 * (1 - t / 1.5); 
 
     if (ring.material.opacity > 0) {
       requestAnimationFrame(update);
@@ -290,15 +281,15 @@ function createFireball(pos) {
     const theta = 2 * Math.PI * Math.random();
     const r = 0.5 + Math.random() * 0.2;
     positions.push(
-      r * Math.sin(phi) * Math.cos(theta), // BEZ pos.x
-      r * Math.cos(phi),                   // BEZ pos.y
-      r * Math.sin(phi) * Math.sin(theta)  // BEZ pos.z
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi),                  
+      r * Math.sin(phi) * Math.sin(theta)  
     );
   }
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   const material = new THREE.PointsMaterial({
     size: 2.5,
-    map: explosionTextures[5] || null, // np. fire_01.png
+    map: explosionTextures[5] || null, 
     color: 0xffcc00,
     transparent: true,
     opacity: 0.85,
@@ -306,7 +297,7 @@ function createFireball(pos) {
     blending: THREE.AdditiveBlending
   });
   const points = new THREE.Points(geometry, material);
-  points.position.set(pos.x, pos.y, pos.z); // USTAW pozycję całego obiektu
+  points.position.set(pos.x, pos.y, pos.z);
   scene.add(points);
 
   const start = performance.now();
@@ -344,7 +335,7 @@ function startMushroomCloud(origin) {
 
     positions.push(origin.x + x, origin.y + y, origin.z + z);
 
-    // Upwards and slight outward velocity
+  
     velocities.push(x * 0.005, 0.02 + Math.random() * 0.03, z * 0.005);
   }
 
@@ -394,14 +385,13 @@ function startMushroomCloud(origin) {
 
 function createFallout(pos) {
   const geometry = new THREE.BufferGeometry();
-  const count = 1200; // dużo więcej cząstek
+  const count = 1200; 
   const positions = [];
   const velocities = [];
-  // Załóżmy, że mapa ma rozmiar ok. 100x100 jednostek (dostosuj jeśli trzeba)
-  const falloutRadius = 50; // promień rozrzutu falloutu
+  
+  const falloutRadius = 50; 
 
   for (let i = 0; i < count; i++) {
-    // Rozrzut na dużym obszarze wokół epicentrum
     const angle = Math.random() * Math.PI * 2;
     const radius = Math.sqrt(Math.random()) * falloutRadius;
     const x = pos.x + Math.cos(angle) * radius;
@@ -411,8 +401,8 @@ function createFallout(pos) {
     positions.push(x, y, z);
 
     velocities.push(
-      (Math.random() - 0.5) * 0.002, // minimalny dryf poziomy
-      -0.003 - Math.random() * 0.003, // wolne opadanie
+      (Math.random() - 0.5) * 0.002, 
+      -0.003 - Math.random() * 0.003,
       (Math.random() - 0.5) * 0.002
     );
   }
@@ -439,7 +429,7 @@ function createFallout(pos) {
       posArr[i * 3 + 2] += velocities[i * 3 + 2];
     }
     geometry.attributes.position.needsUpdate = true;
-    material.opacity = Math.max(0.32 - t * 0.012, 0); // bardzo wolne zanikanie (ok. 25s)
+    material.opacity = Math.max(0.32 - t * 0.012, 0); 
     if (material.opacity > 0) {
       requestAnimationFrame(update);
     } else {
@@ -510,14 +500,6 @@ function startSmoke(origin) {
   setTimeout(() => updateSmoke(), 500);
 }
 
-/*const bombGeometry = new THREE.SphereGeometry(0.3, 32, 32);
-const bombMaterial = new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0x440000 });
-const bomb = new THREE.Mesh(bombGeometry, bombMaterial);
-scene.add(bomb);
-
-bomb.position.set(0, 5, -5);
-let bombFalling = false;
-const bombFallSpeed = 0.07; */
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
