@@ -471,11 +471,11 @@ function startMushroomCloud(origin) {
 
 function createFallout(pos) {
   const geometry = new THREE.BufferGeometry();
-  const count = 1200; 
+  const count = 500; 
   const positions = [];
   const velocities = [];
   
-  const falloutRadius = 50; 
+  const falloutRadius = 8; 
 
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -494,13 +494,13 @@ function createFallout(pos) {
   }
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   const material = new THREE.PointsMaterial({
-    size: 0.22,
+    size: 0.05,
     map: smokeTextures[0] || null,
     color: 0xaaa97f,
     transparent: true,
     opacity: 0.32,
     depthWrite: false,
-    blending: THREE.NormalBlending
+    blending: THREE.AdditiveBlending
   });
   const points = new THREE.Points(geometry, material);
   scene.add(points);
