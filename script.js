@@ -289,7 +289,7 @@ function createFireball(pos) {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   const material = new THREE.PointsMaterial({
     size: 2.5,
-    map: explosionTextures[5] || null, 
+    map: explosionTextures[2] || null, 
     color: 0xffcc00,
     transparent: true,
     opacity: 0.85,
@@ -315,6 +315,68 @@ function createFireball(pos) {
   }
   update();
 }
+
+
+
+function startSmoke(origin) {
+  const smokeCount = 50;
+  const smokePositions = [];
+  const smokeVelocities = [];
+  const smokeGeometry = new THREE.BufferGeometry();
+
+  for (let i = 0; i < smokeCount; i++) {
+    const x = origin.x + (Math.random() - 0.5);
+    const y = origin.y;
+    const z = origin.z + (Math.random() - 0.5);
+    smokePositions.push(x, y, z);
+
+    smokeVelocities.push(
+      (Math.random() - 0.5) * 0.02,
+      Math.random() * 0.1 + 0.05,
+      (Math.random() - 0.5) * 0.02
+    );
+  }
+
+  smokeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(smokePositions, 3));
+  const smokeMaterial = new THREE.PointsMaterial({
+    size: 1,
+    map: smokeTextures[Math.floor(Math.random() * smokeTextures.length)],
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    opacity: 0.2
+  });
+
+  const smokeParticles = new THREE.Points(smokeGeometry, smokeMaterial);
+  scene.add(smokeParticles);
+
+  const smokeStartTime = performance.now();
+  function updateSmoke() {
+    const elapsedTime = performance.now() - smokeStartTime;
+    const pos = smokeGeometry.attributes.position.array;
+
+    for (let i = 0; i < smokeCount; i++) {
+      pos[i * 3] += smokeVelocities[i * 3];
+      pos[i * 3 + 1] += smokeVelocities[i * 3 + 1];
+      pos[i * 3 + 2] += smokeVelocities[i * 3 + 2];
+    }
+
+    smokeGeometry.attributes.position.needsUpdate = true;
+    smokeMaterial.opacity = Math.max(0.3 - elapsedTime / 4000, 0);
+
+    if (smokeMaterial.opacity > 0) {
+      requestAnimationFrame(updateSmoke);
+    } else {
+      scene.remove(smokeParticles);
+      smokeGeometry.dispose();
+      smokeMaterial.dispose();
+    }
+  }
+
+  setTimeout(() => updateSmoke(), 500);
+}
+
+
 
 
 
@@ -441,64 +503,6 @@ function createFallout(pos) {
   update();
 }
 
-
-function startSmoke(origin) {
-  const smokeCount = 50;
-  const smokePositions = [];
-  const smokeVelocities = [];
-  const smokeGeometry = new THREE.BufferGeometry();
-
-  for (let i = 0; i < smokeCount; i++) {
-    const x = origin.x + (Math.random() - 0.5);
-    const y = origin.y;
-    const z = origin.z + (Math.random() - 0.5);
-    smokePositions.push(x, y, z);
-
-    smokeVelocities.push(
-      (Math.random() - 0.5) * 0.02,
-      Math.random() * 0.1 + 0.05,
-      (Math.random() - 0.5) * 0.02
-    );
-  }
-
-  smokeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(smokePositions, 3));
-  const smokeMaterial = new THREE.PointsMaterial({
-    size: 1,
-    map: smokeTextures[Math.floor(Math.random() * smokeTextures.length)],
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    opacity: 0.2
-  });
-
-  const smokeParticles = new THREE.Points(smokeGeometry, smokeMaterial);
-  scene.add(smokeParticles);
-
-  const smokeStartTime = performance.now();
-  function updateSmoke() {
-    const elapsedTime = performance.now() - smokeStartTime;
-    const pos = smokeGeometry.attributes.position.array;
-
-    for (let i = 0; i < smokeCount; i++) {
-      pos[i * 3] += smokeVelocities[i * 3];
-      pos[i * 3 + 1] += smokeVelocities[i * 3 + 1];
-      pos[i * 3 + 2] += smokeVelocities[i * 3 + 2];
-    }
-
-    smokeGeometry.attributes.position.needsUpdate = true;
-    smokeMaterial.opacity = Math.max(0.3 - elapsedTime / 4000, 0);
-
-    if (smokeMaterial.opacity > 0) {
-      requestAnimationFrame(updateSmoke);
-    } else {
-      scene.remove(smokeParticles);
-      smokeGeometry.dispose();
-      smokeMaterial.dispose();
-    }
-  }
-
-  setTimeout(() => updateSmoke(), 500);
-}
 
 
 window.addEventListener('keydown', (e) => {
