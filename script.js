@@ -522,5 +522,8 @@ function renderScene() {
   updateBomb();
   renderer.render(scene, camera);
 }
-
+//////
+/////
+/////
+/////
 renderScene();
