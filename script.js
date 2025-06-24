@@ -318,7 +318,7 @@ function createFireball(pos) {
 
 
 function startSmoke(origin) {
-  const smokeCount = 50;
+  const smokeCount = 200;
   const smokePositions = [];
   const smokeVelocities = [];
   const smokeGeometry = new THREE.BufferGeometry();
@@ -330,15 +330,15 @@ function startSmoke(origin) {
     smokePositions.push(x, y, z);
 
     smokeVelocities.push(
-      (Math.random() - 0.5) * 0.02,
+      (Math.random() - 0.5) * 0.1,
       Math.random() * 0.1 + 0.05,
-      (Math.random() - 0.5) * 0.02
+      (Math.random() - 0.1) * 0.05
     );
   }
 
   smokeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(smokePositions, 3));
   const smokeMaterial = new THREE.PointsMaterial({
-    size: 1,
+    size: 2,
     map: smokeTextures[Math.floor(Math.random() * smokeTextures.length)],
     transparent: true,
     blending: THREE.AdditiveBlending,
@@ -372,7 +372,7 @@ function startSmoke(origin) {
     }
   }
 
-  setTimeout(() => updateSmoke(), 500);
+  setTimeout(() => updateSmoke(), 100);
 }
 
 
@@ -403,13 +403,15 @@ function startMushroomCloud(origin) {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
   const texture = smokeTextures[Math.floor(Math.random() * smokeTextures.length)];
+  texture.minFilter = THREE.LinearFilter;
   const material = new THREE.PointsMaterial({
     size: 3.0,
     map: texture,
     transparent: true,
     opacity: 0.3,
     depthWrite: false,
-    blending: THREE.NormalBlending
+    blending: THREE.NormalBlending,
+    alphaTest: 0.05
   });
 
   const cloud = new THREE.Points(geometry, material);
