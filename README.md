@@ -16,5 +16,5 @@
 ## **🛠️ Użyte technologie**
 - Three.js
 - WebGL 
-- GLTF/GLB - format modeli 3D
+- GLB - format modeli 3D
 - Pointer Lock API - kontrola myszy 
