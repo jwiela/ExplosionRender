@@ -140,7 +140,6 @@ for (let i = 1; i <= 9; i++) {
   textureLoader.load(`PNG/smoke_0${i}.png`, (texture) => smokeTextures.push(texture));
 }
 
-
 let bombModel = null;
 let bombFalling = false;
 const bombFallSpeed = 0.07;
@@ -152,9 +151,6 @@ gltfLoader.load('texstures/atomic_bomb.glb', (gltf) => {
   scene.add(bombModel);
 });
 
-
-
-
 function startExplosionAt(pos) {
   flashScreen(); 
   setTimeout(() => createPlasmaBall(pos), 10); 
@@ -164,7 +160,6 @@ function startExplosionAt(pos) {
   setTimeout(() => startSmoke(pos), 350); 
   setTimeout(() => createFallout(pos), 2500); 
 }
-
 
 function createPlasmaBall(pos) {
   const geometry = new THREE.BufferGeometry();
@@ -208,7 +203,6 @@ function createPlasmaBall(pos) {
   }
   update();
 }
-
 
 function createShockwave(pos) {
   const shockwaveY = pos.y + 1.3;
@@ -269,9 +263,6 @@ function flashScreen() {
   setTimeout(fade, 30);
 }
 
-
-
-
 function createFireball(pos) {
   const geometry = new THREE.BufferGeometry();
   const positions = [];
@@ -314,8 +305,6 @@ function createFireball(pos) {
   }
   update();
 }
-
-
 
 function startSmoke(origin) {
   const smokeCount = 200;
@@ -374,10 +363,6 @@ function startSmoke(origin) {
 
   setTimeout(() => updateSmoke(), 100);
 }
-
-
-
-
 
 function startMushroomCloud(origin) {
   const count = 400;
@@ -444,8 +429,6 @@ function startMushroomCloud(origin) {
   update();
 }
 
-
-
 function createFallout(pos) {
   const geometry = new THREE.BufferGeometry();
   const count = 1200; 
@@ -504,8 +487,6 @@ function createFallout(pos) {
   update();
 }
 
-
-
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     if (!bombFalling && bombModel) {
@@ -534,7 +515,6 @@ function updateBomb() {
     startExplosionAt(bombModel.position.clone());
   }
 }
-
 
 function renderScene() {
   requestAnimationFrame(renderScene);
