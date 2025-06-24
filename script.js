@@ -275,10 +275,10 @@ function flashScreen() {
 function createFireball(pos) {
   const geometry = new THREE.BufferGeometry();
   const positions = [];
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 150; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
     const theta = 2 * Math.PI * Math.random();
-    const r = 0.5 + Math.random() * 0.2;
+    const r = 0.5 + Math.random() * 0.3;
     positions.push(
       r * Math.sin(phi) * Math.cos(theta),
       r * Math.cos(phi),                  
@@ -303,7 +303,7 @@ function createFireball(pos) {
   function update() {
     const t = (performance.now() - start) / 1000;
     material.opacity = 0.85 - t * 0.7;
-    points.scale.setScalar(1 + t * 6);
+    points.scale.setScalar(1 + t * 2.5);
     if (material.opacity > 0) {
       requestAnimationFrame(update);
     } else {
@@ -380,7 +380,7 @@ function startSmoke(origin) {
 
 
 function startMushroomCloud(origin) {
-  const count = 400;
+  const count = 600;
   const positions = [];
   const velocities = [];
   const geometry = new THREE.BufferGeometry();
@@ -404,14 +404,19 @@ function startMushroomCloud(origin) {
 
   const texture = smokeTextures[Math.floor(Math.random() * smokeTextures.length)];
   texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
   const material = new THREE.PointsMaterial({
-    size: 3.0,
+    size: 2.0,
     map: texture,
     transparent: true,
-    opacity: 0.3,
+    opacity: 0.6,
     depthWrite: false,
-    blending: THREE.NormalBlending,
-    alphaTest: 0.05
+    blending: THREE.AdditiveBlending,
+    alphaTest: 0.1, 
+    vertexColors: false,
+    sizeAttenuation: true
   });
 
   const cloud = new THREE.Points(geometry, material);
@@ -430,7 +435,7 @@ function startMushroomCloud(origin) {
     }
 
     geometry.attributes.position.needsUpdate = true;
-    material.opacity = Math.max(0.4 - time / 5000, 0);
+    material.opacity = Math.max(0.25 - time / 6000, 0);
 
     if (material.opacity > 0) {
       requestAnimationFrame(update);
