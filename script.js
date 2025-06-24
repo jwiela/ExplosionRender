@@ -365,24 +365,46 @@ function startSmoke(origin) {
 }
 
 function startMushroomCloud(origin) {
-  const count = 600;
+  const count = 800;
   const positions = [];
   const velocities = [];
   const geometry = new THREE.BufferGeometry();
 
   for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = Math.random() * 1.5;
-    const height = Math.random() * 2;
+    let x, y, z, velX, velY, velZ;
+    
+    if (i < count * 0.4) {
+   
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.random() * 0.8; 
+      const height = Math.random() * 3;
+      
+      x = Math.cos(angle) * radius;
+      y = height;
+      z = Math.sin(angle) * radius;
+      
+ 
+      velX = x * 0.002;
+      velY = 0.04 + Math.random() * 0.02; 
+      velZ = z * 0.002;
+    } else {
+     
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.random() * 2.5; 
+      const height = 2.5 + Math.random() * 1.5;
+      
+      x = Math.cos(angle) * radius;
+      y = height;
+      z = Math.sin(angle) * radius;
+      
 
-    const x = Math.cos(angle) * radius;
-    const y = height;
-    const z = Math.sin(angle) * radius;
-
+      velX = x * 0.008; 
+      velY = 0.01 + Math.random() * 0.015;
+      velZ = z * 0.008;
+    }
+    
     positions.push(origin.x + x, origin.y + y, origin.z + z);
-
-  
-    velocities.push(x * 0.005, 0.02 + Math.random() * 0.03, z * 0.005);
+    velocities.push(velX, velY, velZ);
   }
 
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -392,16 +414,18 @@ function startMushroomCloud(origin) {
   texture.magFilter = THREE.LinearFilter;
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
+  
   const material = new THREE.PointsMaterial({
-    size: 2.0,
+    size: 2.5,
     map: texture,
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.7,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    alphaTest: 0.1, 
+    alphaTest: 0.1,
     vertexColors: false,
-    sizeAttenuation: true
+    sizeAttenuation: true,
+    color: 0x666666 
   });
 
   const cloud = new THREE.Points(geometry, material);
@@ -414,13 +438,24 @@ function startMushroomCloud(origin) {
     const pos = geometry.attributes.position.array;
 
     for (let i = 0; i < count; i++) {
-      pos[i * 3] += velocities[i * 3];
-      pos[i * 3 + 1] += velocities[i * 3 + 1];
-      pos[i * 3 + 2] += velocities[i * 3 + 2];
+      const idx = i * 3;
+      
+      pos[idx] += velocities[idx];
+      pos[idx + 1] += velocities[idx + 1];
+      pos[idx + 2] += velocities[idx + 2];
+      
+      velocities[idx] *= 0.998;
+      velocities[idx + 1] *= 0.995;
+      velocities[idx + 2] *= 0.998;
+      
+      if (Math.random() < 0.1) {
+        velocities[idx] += (Math.random() - 0.5) * 0.001;
+        velocities[idx + 2] += (Math.random() - 0.5) * 0.001;
+      }
     }
 
     geometry.attributes.position.needsUpdate = true;
-    material.opacity = Math.max(0.25 - time / 6000, 0);
+    material.opacity = Math.max(0.7 - time / 8000, 0);
 
     if (material.opacity > 0) {
       requestAnimationFrame(update);
@@ -527,8 +562,4 @@ function renderScene() {
   updateBomb();
   renderer.render(scene, camera);
 }
-//////
-/////
-/////
-/////
 renderScene();
